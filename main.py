@@ -1,5 +1,13 @@
 import json
 import time
+def normalize_label(label):
+    if label in ["+", "cross", "Cross"]:
+        return "Cross"
+    elif label in ["x", "X"]:
+        return "X"
+    else:
+        raise ValueError("올바르지 않은 라벨입니다.")
+
 def calculate_mac(pattern, filter_data):
     score = 0.0
 
@@ -86,20 +94,14 @@ def run_json_tests(data):
             size_key = case_id.rsplit("_", 1)[0]
             size = int(size_key.split("_")[1])
 
-            filter_labels = {
-                "cross": "Cross",
-                "x": "X"
-            }
-
             normalized_filters = {}
 
             for key, value in filters[size_key].items():
-                if key in filter_labels:
-                    normalized_filters[filter_labels[key]] = value
+                normalized_key = normalize_label(key)
+                normalized_filters[normalized_key] = value
 
             filter_cross = normalized_filters["Cross"]
             filter_x = normalized_filters["X"]
-
             pattern = case["input"]
 
             if not validate_matrix(filter_cross, size):
@@ -117,13 +119,7 @@ def run_json_tests(data):
             result = judge_pattern(score_cross, score_x)
 
             expected = case["expected"]
-
-            if expected in ["+", "cross"]:
-                expected = "Cross"
-            elif expected in ["x", "X"]:
-                expected = "X"
-            else:
-                raise ValueError("기대 정답이 올바르지 않습니다.")
+            expected = normalize_label(expected)
 
             if result == expected:
                 status = "PASS"
@@ -135,6 +131,11 @@ def run_json_tests(data):
             print(f"\n테스트: {case_id}")
             print(f"Cross 점수: {score_cross:.4f}")
             print(f"X 점수: {score_x:.4f}")
+
+            if result == "UNDECIDED":
+                score_diff = abs(score_cross - score_x)
+                print(f"동점 판정 - 점수 차이: {score_diff:.12g}")
+
             print(f"판정 결과: {result}")
             print(f"기대 정답: {expected}")
             print(f"테스트 결과: {status}")
@@ -146,10 +147,14 @@ def run_json_tests(data):
 
     run_benchmark()
 
+    fail_rate = (len(failed_cases) / total * 100) if total > 0 else 0
+
     print("\n=== 테스트 요약 ===")
     print(f"전체 테스트: {total}")
     print(f"PASS: {passed}")
     print(f"FAIL: {len(failed_cases)}")
+    print(f"실패 비율: {fail_rate:.2f}%")
+
 
     if failed_cases:
         print("\n실패한 테스트 목록:")
@@ -234,6 +239,10 @@ while True:
         print("A 점수:", score_a)
         print("B 점수:", score_b)
         print(f"연산 시간: {elapsed_ms:.6f} ms")
+
+        if result == "UNDECIDED":
+            score_diff = abs(score_a - score_b)
+            print(f"동점 판정 - 점수 차이: {score_diff:.12g}")
 
         if result == "Cross":
             print("판정 결과: A")
