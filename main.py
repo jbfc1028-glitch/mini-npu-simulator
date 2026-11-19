@@ -61,9 +61,12 @@ def run_json_tests(data):
         print("JSON 구조 오류: 최상위 데이터는 객체여야 합니다.")
         return
 
-    filters = data.get("filters", {})
-    patterns = data.get("patterns", {})
+    if "filters" not in data or "patterns" not in data:
+        print("JSON 구조 오류: filters 또는 patterns 키가 없습니다.")
+        return
 
+    filters = data["filters"]
+    patterns = data["patterns"]
 
     total = 0
     passed = 0
@@ -83,8 +86,20 @@ def run_json_tests(data):
             size_key = case_id.rsplit("_", 1)[0]
             size = int(size_key.split("_")[1])
 
-            filter_cross = filters[size_key]["cross"]
-            filter_x = filters[size_key]["x"]
+            filter_labels = {
+                "cross": "Cross",
+                "x": "X"
+            }
+
+            normalized_filters = {}
+
+            for key, value in filters[size_key].items():
+                if key in filter_labels:
+                    normalized_filters[filter_labels[key]] = value
+
+            filter_cross = normalized_filters["Cross"]
+            filter_x = normalized_filters["X"]
+
             pattern = case["input"]
 
             if not validate_matrix(filter_cross, size):
@@ -128,6 +143,8 @@ def run_json_tests(data):
             failed_cases.append(f"{case_id}: {error}")
             print(f"\n테스트: {case_id}")
             print(f"테스트 결과: FAIL ({error})")
+
+    run_benchmark()
 
     print("\n=== 테스트 요약 ===")
     print(f"전체 테스트: {total}")
@@ -224,6 +241,8 @@ while True:
             print("판정 결과: B")
         else:
             print("판정 결과: UNDECIDED")
+
+        run_benchmark()
 
     
     elif choice == "2":
